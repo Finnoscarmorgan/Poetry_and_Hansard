@@ -9,7 +9,7 @@ import pprint
 #All of this code will then need to be put in a big for loop that iterates through
 #each file, holds its file name in a variable, parses the file and then uses the
 #filename to save it as a unique csv
-tree = ET.parse('hansard test.xml')
+tree = ET.parse('/Users/fiannualamorgan/Documents/GitHub/Poetry_and_Hansard/hansard-xml/senate/1903/19030723_senate_1_14.xml')
 root = tree.getroot()
 
 # Setting up the table.
@@ -45,7 +45,16 @@ def xmlDig(thisElement,rows,cols,vals,stop):
                     if i.attrib['role']=='metadata':
                         vals[ind]=i.text
                 elif i.tag==stop:
-                    vals[ind]=i.text.replace('=','')
+                    print(len(list(i)))
+                    if len(list(i))>0:
+                        vals[ind]=i.text.replace('=','')
+                        for k in i:
+                            if k.text != None:
+                                vals[ind]=vals[ind]+" "+k.text
+                            if k.tail != None:
+                                vals[ind]=vals[ind]+" "+k.tail
+                    else:     
+                        vals[ind]=i.text.replace('=','')
                     stopMatchFound=True
                     rows.append(list(vals))
                     break
@@ -65,4 +74,37 @@ df = pd.DataFrame(rows, columns=cols)
 
 # Writing dataframe to csv. WIll need to make the file name a variable
 # that is determined by the file name of the xml 
-df.to_csv("output.csv") 
+df.to_csv("/Users/fiannualamorgan/Documents/GitHub/Poetry_and_Hansard/Test_File_18_04_2021.csv") 
+
+results=[]
+ind=0
+match=False
+checkRange=[1,2,3,4,5]
+numBefore=0
+numAfter=0
+for row in rows:
+    if any([row[17].lower().find("poem")!=-1,row[17].lower().find("poet")!=-1]):
+        match=True
+        speaker=row[8]
+         
+        for indices in checkRange:
+            if rows[ind-indices][8].lower().find(speaker.lower()):
+                continue
+            else:
+                numBefore=indices-1
+        for indices in checkRange:
+            if rows[ind+indices][8].lower().find(speaker.lower()):
+                continue
+            else:
+                numAfter=indices-1
+
+    results.append(row[17].lower().find("poem")!=-1)
+    ind=ind+1        
+
+
+
+    
+
+
+
+[i for i, x in enumerate(results) if x]
