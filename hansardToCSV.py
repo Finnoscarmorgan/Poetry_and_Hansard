@@ -3,6 +3,17 @@ import xmltodict
 import pandas as pd
 import pprint
 
+
+
+
+# Setting up the table.
+#I've added pretty much all the data types that are there, if you see any more you 
+#can just add it to the list and it will automatically pull it out. Just make sure
+#that para remains the last item in the list
+cols = ["date","parliament.no","session.no","period.no","chamber","page.no","proof","day.start","name","name.id","title","type","electorate","party","role","in.gov","first.speech","para"] 
+stop="para"
+output=[]
+
 # Parsing the XML file, add here the file to be parsed. For this to all work properly
 #without having to manually run this code for every file, you will need to get 
 # access to all the filenames in your hansard xml directory.
@@ -12,17 +23,11 @@ import pprint
 tree = ET.parse('/Users/fiannualamorgan/Documents/GitHub/Poetry_and_Hansard/hansard-xml/senate/1903/19030723_senate_1_14.xml')
 root = tree.getroot()
 
-# Setting up the table.
-#I've added pretty much all the data types that are there, if you see any more you 
-#can just add it to the list and it will automatically pull it out. Just make sure
-#that para remains the last item in the list
-cols = ["date","parliament.no","session.no","period.no","chamber","page.no","proof","day.start","name","name.id","title","type","electorate","party","role","in.gov","first.speech","para"] 
 vals=[]
 ind=0
 for i in cols:
     vals.append('')
     ind=ind+1
-stop="para"
 rows = [] 
 
 #This is a recursive function that looks for items in the cols list as children
@@ -65,18 +70,10 @@ def xmlDig(thisElement,rows,cols,vals,stop):
             xmlDig(i,rows,cols,vals,stop)
     return rows
 
-
+df=pd.DataFrame(rows,columns=cols)
 #Call the digging function
 rows=xmlDig(root,rows,cols,vals,stop) 
 
-#Convert to dataframe
-df = pd.DataFrame(rows, columns=cols) 
-
-# Writing dataframe to csv. WIll need to make the file name a variable
-# that is determined by the file name of the xml 
-df.to_csv("/Users/fiannualamorgan/Documents/GitHub/Poetry_and_Hansard/Test_File_18_04_2021.csv") 
-
-results=[]
 ind=0
 match=False
 checkRange=[1,2,3,4,5]
@@ -84,27 +81,42 @@ numBefore=0
 numAfter=0
 for row in rows:
     if any([row[17].lower().find("poem")!=-1,row[17].lower().find("poet")!=-1]):
+        speakerInfo=row
         match=True
         speaker=row[8]
-         
+        colInd=0
+        for col in cols:
+            if speakerInfo==None:
+                for row1 in rows:
+                    if row1[8]==speaker and row1[colInd]!=None:
+                        speakerInfo[colInd]=row1[colInd]
+                        break
+            colInd=colInd+1
+
         for indices in checkRange:
-            if rows[ind-indices][8].lower().find(speaker.lower()):
+            if rows[ind-indices][8].lower().find(speaker.lower())!=-1:
                 continue
             else:
                 numBefore=indices-1
+                break
         for indices in checkRange:
-            if rows[ind+indices][8].lower().find(speaker.lower()):
+            if rows[ind+indices][8].lower().find(speaker.lower())!=-1:
                 continue
             else:
                 numAfter=indices-1
+                break
+        concatRange=list(range(ind-numBefore,ind+numAfter+1))
+        speech=''
+        for i in concatRange:
+            speech= speech+"\n \n"+rows[i][17]
+        speakerInfo[17]=speech
+        df = pd.DataFrame({"Info":cols,"Speaker_Info":speakerInfo})
 
-    results.append(row[17].lower().find("poem")!=-1)
+        output.append(speakerInfo)
     ind=ind+1        
 
 
+output=pd.DataFrame(output,columns=cols)
 
-    
-
-
-
-[i for i, x in enumerate(results) if x]
+# Writing dataframe to csv
+output.to_csv("/Users/fiannualamorgan/Documents/GitHub/Poetry_and_Hansard/Test_Poetry_File.csv") 
